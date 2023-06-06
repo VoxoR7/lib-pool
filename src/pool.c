@@ -4,11 +4,14 @@
 
 #include "pool.h"
 
+#define KILO (1000)
+#define MEGA (1000 * 1000)
+
 #define POOL_SIZE_START_POWER 6UL
 #define POOL_SIZE_START (1 << POOL_SIZE_START_POWER)
 #define POOL_TYPE_NUMBER 5
 
-#define POOL_NUMBER 100000
+#define POOL_NUMBER (1000 * KILO)
 
 #if (POOL_SIZE_START == 0) || ((POOL_SIZE_START & (POOL_SIZE_START - 1)) != 0)
     #error "POOL_SIZE_START must be a power of 2"
@@ -100,26 +103,54 @@ void pool_init(void) {
     printf("[INFO ] OK\n");
 }
 
+#ifdef POOL_STATS
+    static void pool_stats(void) {
+        static uint64_t nr_call = 0;
+        nr_call++;
+
+        if (nr_call >= POOL_STATS) {
+            nr_call = 0;
+            printf("[INFO ] ----- printing pool statistics -----\n");
+            for (uint16_t i = 0, pow = 1; i < POOL_TYPE_NUMBER; i++, pow *= 2)
+                printf("[INFO ] pool #%3"PRIu16", size %5"PRIu16" : %4.1f\n", i, POOL_SIZE_START * pow, (pools[i].first_pool->used * 100.0) / POOL_NUMBER);
+        }
+    }
+#endif
+
 void *pool_malloc(size_t size) {
+    #ifdef POOL_STATS
+        pool_stats();
+    #endif
+
     for (uint32_t i = 0, pow = 1; i < POOL_TYPE_NUMBER; i++, pow *= 2) {
         if (size < POOL_SIZE_START * pow) {
             #ifdef POOL_STATS
                 pools[i].first_pool->used++;
             #endif
             uint32_t indice_return = pools[i].first_pool->first_free;
+            if (indice_return == NO_MORE_SPACE)
+                return NULL;
             pools[i].first_pool->first_free = pools[i].first_pool->link[indice_return];
             void *ptr = pools[i].first_pool->beggining + (indice_return * (pow * POOL_SIZE_START));
-            printf("[INFO ] malloc pool %d, indice [%d] %p %lu\n", (pow * POOL_SIZE_START), indice_return, ptr, size);
+            #ifdef DEBUG
+                printf("[INFO ] malloc pool %d, indice [%d] %p %lu\n", (pow * POOL_SIZE_START), indice_return, ptr, size);
+            #endif
             return ptr;
         }
     }
 
     void *ptr = malloc(size);
-    printf("[INFO ] malloc %p %lu\n", ptr, size);
+    #ifdef DEBUG
+        printf("[INFO ] malloc %p %lu\n", ptr, size);
+    #endif
     return ptr;
 }
 
 void pool_free(void *ptr) {
+    #ifdef POOL_STATS
+        pool_stats();
+    #endif
+
     for (uint32_t i = 0, pow = 1; i < POOL_TYPE_NUMBER; i++, pow *= 2) {
         if (ptr >= pools[i].first_pool->beggining && 
                 ptr < pools[i].first_pool->beggining + (POOL_NUMBER * (pow * POOL_SIZE_START))) {
@@ -128,18 +159,24 @@ void pool_free(void *ptr) {
             #endif
             uint32_t indice_free = (ptr - pools[i].first_pool->beggining) / (pow * POOL_SIZE_START);
             pools[i].first_pool->link[indice_free] = pools[i].first_pool->first_free;
-            printf("[INFO ] free  pool %d, indice [%d] %p\n", (pow * POOL_SIZE_START), indice_free, ptr);
+            pools[i].first_pool->first_free = indice_free;
+            #ifdef DEBUG
+                printf("[INFO ] free  pool %d, indice [%d] %p\n", (pow * POOL_SIZE_START), indice_free, ptr);
+            #endif
             return;
         }
     }
 
-    printf("[INFO ] free ptr %p\n", ptr);
+    #ifdef DEBUG
+        printf("[INFO ] free ptr %p\n", ptr);
+    #endif
     free(ptr);
 }
 
 void *pool_calloc(size_t nmemb, size_t size) {
-    /* TODO : check for overflow */
-    size_t malloc_size = nmemb * size;
+    size_t malloc_size;
+    if (__builtin_mul_overflow(nmemb, size, &malloc_size) == true)
+        return NULL;
 
     void *ptr = pool_malloc(malloc_size);
     if (ptr == NULL)
