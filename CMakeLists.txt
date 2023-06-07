@@ -9,7 +9,7 @@ cmake_policy(VERSION 3.16)
 ##### lib pool configuration #####
 
 project(pool    LANGUAGES C
-                VERSION 0.1.1
+                VERSION 0.1.2
                 DESCRIPTION "A project of libpool")
 
 add_compile_options(-Wall -Wextra -std=c2x)

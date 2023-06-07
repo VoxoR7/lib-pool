@@ -151,6 +151,9 @@ void pool_free(void *ptr) {
         pool_stats();
     #endif
 
+    if (ptr == NULL)
+        return;
+
     for (uint32_t i = 0, pow = 1; i < POOL_TYPE_NUMBER; i++, pow *= 2) {
         if (ptr >= pools[i].first_pool->beggining && 
                 ptr < pools[i].first_pool->beggining + (POOL_NUMBER * (pow * POOL_SIZE_START))) {
@@ -189,9 +192,8 @@ void *pool_calloc(size_t nmemb, size_t size) {
 }
 
 void *pool_realloc(void *ptr, size_t size) {
-    if (ptr == NULL) {
+    if (ptr == NULL)
         return pool_malloc(size);
-    }
 
     if (size == 0) {
         pool_free(ptr);
@@ -207,9 +209,8 @@ void *pool_realloc(void *ptr, size_t size) {
         }
     }
 
-    if (old == POOL_TYPE_NUMBER) {
+    if (old == POOL_TYPE_NUMBER)
         return realloc(ptr, size);
-    }
 
     for (new = 0, pow = 1; new < POOL_TYPE_NUMBER; new++, pow *= 2) {
         if (size < POOL_SIZE_START * pow) {
@@ -217,9 +218,8 @@ void *pool_realloc(void *ptr, size_t size) {
         }
     }
 
-    if (new == old) {
+    if (new == old)
         return ptr;
-    }
 
     if (new == POOL_TYPE_NUMBER) {
         void *new_ptr = malloc(size);
