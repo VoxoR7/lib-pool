@@ -11,7 +11,7 @@
 #define POOL_SIZE_START (1 << POOL_SIZE_START_POWER)
 #define POOL_TYPE_NUMBER 5
 
-#define POOL_NUMBER (1000 * KILO)
+#define POOL_NUMBER (100 * KILO)
 
 #if (POOL_SIZE_START == 0) || ((POOL_SIZE_START & (POOL_SIZE_START - 1)) != 0)
     #error "POOL_SIZE_START must be a power of 2"

@@ -4,7 +4,7 @@
 
 #include "pool.h"
 
-#define STRESS_TEST_CASE 1000000
+#define STRESS_TEST_CASE 100000
 
 int main() {
     pool_init();
